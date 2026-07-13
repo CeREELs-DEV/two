@@ -13,6 +13,31 @@ function sourceBetween(start, end) {
   return source.slice(from, to);
 }
 
+function createStepContext() {
+  return {
+    flipping: false,
+    STEPS: [
+      { k: 'cover' }, { k: 'spread', s: 0 }, { k: 'poll' }, { k: 'spread', s: 1 },
+      { k: 'spread', s: 2 }, { k: 'spread', s: 3 }, { k: 'party' },
+      { k: 'spread', s: 4 }, { k: 'spread', s: 5 }, { k: 'finish' },
+    ],
+    STEP: 2,
+    NAVDIR: 1,
+    maxStep: 2,
+    pollDone: false,
+    activityDone: false,
+    ch2Started: false,
+    SPREAD: 0,
+    PAGES: [{}, {}],
+    flipMode: false,
+    canLeaveForward() { return false; },
+    closeAllActivities() {},
+    loadNovel() {},
+    renderNodePath() {},
+    updateArrows() {},
+  };
+}
+
 test('스토리맵 첫 노드는 Ella Gator를 원래 대소문자로 표시한다', () => {
   assert.ok(source.includes("{t:'loc', icon:'📖', chap:'Ella Gator', at:'cover'}"));
   assert.ok(source.includes('.np-node[data-i="0"] .np-chap{text-transform:none;}'));
@@ -30,6 +55,43 @@ test('Storyboard 확인 버튼 문구를 Check my story로 통일한다', () => 
   assert.ok(source.includes('#sb-checkbtn::after{content:"Check my story";}'));
   assert.match(source, /id="sb-checkbtn" aria-label="Check my story" title="Check my story"/);
   assert.ok(!source.includes('Check my order'));
+});
+
+test('스테이지 노드는 완료 상태를 바꾸지 않고 직접 이동한다', () => {
+  const nodeSource = sourceBetween('function nodeAction(i){', 'function alignNodePath()');
+  const nodeContext = {
+    NODES: Array.from({ length: 10 }, () => ({})),
+    ch2Started: true,
+    maxStep: 0,
+    calls: [],
+    avatarNodeIdx() { return 0; },
+    goStep(i, options) { nodeContext.calls.push({ i, options }); },
+  };
+
+  runInNewContext(`${nodeSource}; nodeAction(9);`, nodeContext);
+  assert.equal(nodeContext.calls.length, 1);
+  assert.equal(nodeContext.calls[0].i, 9);
+  assert.equal(nodeContext.calls[0].options.direct, true);
+
+  nodeContext.NODES[8].locked = true;
+  runInNewContext('nodeAction(8);', nodeContext);
+  assert.equal(nodeContext.calls.length, 1);
+
+  const stepSource = sourceBetween('function goStep(', 'function goNext()');
+  const stepContext = createStepContext();
+  runInNewContext(`${stepSource}; goStep(3);`, stepContext);
+  assert.equal(stepContext.STEP, 2);
+  runInNewContext('goStep(3, { direct: true });', stepContext);
+  assert.equal(stepContext.STEP, 3);
+  assert.equal(stepContext.pollDone, false);
+
+  const partyContext = createStepContext();
+  partyContext.STEP = 6;
+  partyContext.maxStep = 6;
+  runInNewContext(`${stepSource}; goStep(7, { direct: true });`, partyContext);
+  assert.equal(partyContext.STEP, 7);
+  assert.equal(partyContext.activityDone, false);
+  assert.ok(source.includes("aria-label=\"Open '+nodeName+'\""));
 });
 
 test('reunion의 쉬운 어휘를 party 대신 gathering으로 제공한다', () => {
