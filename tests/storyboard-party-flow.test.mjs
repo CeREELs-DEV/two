@@ -25,6 +25,12 @@ test('Storyboard의 Shuffle 제어를 Reset 제어로 제공한다', () => {
   assert.ok(source.includes("document.getElementById('sb-shuffle').addEventListener('click', function(){ if(sbFrames.length) sbResetBoard(); });"));
 });
 
+test('Storyboard 확인 버튼 문구를 Check my story로 통일한다', () => {
+  assert.ok(source.includes('#sb-checkbtn::after{content:"Check my story";}'));
+  assert.match(source, /id="sb-checkbtn" aria-label="Check my story" title="Check my story"/);
+  assert.ok(!source.includes('Check my order'));
+});
+
 test('정답을 직접 확인하면 성공 처리 후 Play My clips를 실행한다', () => {
   const check = sourceBetween('function sbCheck(){', 'function sbUnlock()');
   const reveal = sourceBetween('function sbRevealNew(){', 'function sbFlashBar(');
