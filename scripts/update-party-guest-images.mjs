@@ -36,9 +36,14 @@ const CROPPED_CSS_WITHOUT_HIDDEN = `  .gav{width:100%;max-width:84px;height:84px
   .guestwrap[data-id="g_korea"] .guest-img{left:-134px;}
   .gav .guest-fallback svg{filter:drop-shadow(0 2px 3px rgba(150,120,70,.28));}`;
 
-const NEW_CSS = CROPPED_CSS_WITHOUT_HIDDEN.replace(
+const COLLAPSED_CROPPED_CSS = CROPPED_CSS_WITHOUT_HIDDEN.replace(
   '  .gav .guest-img{',
   '  .gav .guest-fallback[hidden]{display:none;}\n  .gav .guest-img{',
+);
+
+const NEW_CSS = COLLAPSED_CROPPED_CSS.replace(
+  '.gav{width:100%;max-width:84px;',
+  '.gav{width:84px;max-width:100%;',
 );
 
 const OLD_GUEST_WRAP = `  function guestWrap(id,mode){
@@ -80,6 +85,7 @@ export function transformPartyDocument(document) {
   if (next.includes(OLD_CSS)) next = replaceOnce(next, OLD_CSS, NEW_CSS, '게스트 CSS');
   else if (next.includes(CONTAIN_CSS)) next = replaceOnce(next, CONTAIN_CSS, NEW_CSS, '게스트 CSS 업그레이드');
   else if (next.includes(TOP_CENTER_CSS)) next = replaceOnce(next, TOP_CENTER_CSS, NEW_CSS, '게스트 세로 CSS 업그레이드');
+  else if (next.includes(COLLAPSED_CROPPED_CSS)) next = replaceOnce(next, COLLAPSED_CROPPED_CSS, NEW_CSS, '게스트 너비 CSS 업그레이드');
   else if (next.includes(CROPPED_CSS_WITHOUT_HIDDEN)) next = replaceOnce(next, CROPPED_CSS_WITHOUT_HIDDEN, NEW_CSS, '게스트 fallback CSS 업그레이드');
   else if (!next.includes(NEW_CSS)) throw new Error('게스트 CSS 기준 문자열을 찾을 수 없습니다.');
 

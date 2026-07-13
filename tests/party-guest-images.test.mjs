@@ -58,9 +58,14 @@ const CROPPED_CSS_WITHOUT_HIDDEN = `  .gav{width:100%;max-width:84px;height:84px
   ${EXPECTED_POSITION_CSS.join('\n  ')}
   .gav .guest-fallback svg{filter:drop-shadow(0 2px 3px rgba(150,120,70,.28));}`;
 
-const CROPPED_CSS = CROPPED_CSS_WITHOUT_HIDDEN.replace(
+const COLLAPSED_CROPPED_CSS = CROPPED_CSS_WITHOUT_HIDDEN.replace(
   '  .gav .guest-img{',
   `${HIDDEN_FALLBACK_CSS}\n  .gav .guest-img{`,
+);
+
+const CROPPED_CSS = COLLAPSED_CROPPED_CSS.replace(
+  '.gav{width:100%;max-width:84px;',
+  '.gav{width:84px;max-width:100%;',
 );
 
 function mappingLine(guestId, states) {
@@ -77,7 +82,7 @@ test('Perfect Party 문서에 상태별 게스트 이미지와 SVG fallback을 �
   assert.ok(transformed.includes("img.addEventListener('error'"));
   assert.ok(transformed.includes('guestSVG(g.color,state)'));
   assert.ok(transformed.includes(HIDDEN_FALLBACK_CSS));
-  assert.ok(transformed.includes('.gav{width:100%;max-width:84px;height:84px;margin:0 auto;position:relative;overflow:hidden;}'));
+  assert.ok(transformed.includes('.gav{width:84px;max-width:100%;height:84px;margin:0 auto;position:relative;overflow:hidden;}'));
   assert.ok(transformed.includes(`.gav .guest-img{position:absolute;top:${IMAGE_TOP}px;height:210px;width:auto;max-width:none;`));
   assert.ok(!transformed.includes('top:50%;transform:translateY(-50%);height:210px'));
   for (const rule of EXPECTED_POSITION_CSS) assert.ok(transformed.includes(rule), rule);
@@ -105,12 +110,14 @@ test('기존 GUESTIMG 문서의 이전 CSS를 보정 CSS로 업그레이드한�
   const current = extractPartyDocument(source);
   const desired = current.includes(CROPPED_CSS)
     ? current
-    : current.includes(CROPPED_CSS_WITHOUT_HIDDEN)
-      ? current.replace(CROPPED_CSS_WITHOUT_HIDDEN, CROPPED_CSS)
-      : current.replace(TOP_CENTER_CSS, CROPPED_CSS);
+    : current.includes(COLLAPSED_CROPPED_CSS)
+      ? current.replace(COLLAPSED_CROPPED_CSS, CROPPED_CSS)
+      : current.includes(CROPPED_CSS_WITHOUT_HIDDEN)
+        ? current.replace(CROPPED_CSS_WITHOUT_HIDDEN, CROPPED_CSS)
+        : current.replace(TOP_CENTER_CSS, CROPPED_CSS);
 
   assert.ok(desired.includes(CROPPED_CSS), '보정 CSS fixture를 구성해야 한다');
-  for (const previousCss of [CONTAIN_CSS, TOP_CENTER_CSS, CROPPED_CSS_WITHOUT_HIDDEN]) {
+  for (const previousCss of [CONTAIN_CSS, TOP_CENTER_CSS, CROPPED_CSS_WITHOUT_HIDDEN, COLLAPSED_CROPPED_CSS]) {
     const previous = desired.replace(CROPPED_CSS, previousCss);
     assert.notEqual(previous, desired, '이전 CSS fixture를 구성해야 한다');
     assert.equal(transformPartyDocument(previous), desired);
@@ -131,6 +138,7 @@ test('index.html의 실제 내장 문서와 9개 PNG가 배포 가능한 상태�
   }
   assert.ok(embedded.includes('height:210px;width:auto;max-width:none;'));
   assert.ok(embedded.includes(HIDDEN_FALLBACK_CSS));
+  assert.ok(embedded.includes('.gav{width:84px;max-width:100%;height:84px;'));
   assert.ok(embedded.includes(`position:absolute;top:${IMAGE_TOP}px;height:210px;`));
   for (const rule of EXPECTED_POSITION_CSS) assert.ok(embedded.includes(rule), rule);
 });
