@@ -31,6 +31,11 @@ test('Storyboard 확인 버튼 문구를 Check my story로 통일한다', () => 
   assert.ok(!source.includes('Check my order'));
 });
 
+test('reunion의 쉬운 어휘를 party 대신 gathering으로 제공한다', () => {
+  assert.ok(source.includes('INTERACT_B["It’s a glorious,"][0][0].vocab.reunion[1]="gathering";'));
+  assert.ok(source.includes("el.setAttribute('aria-label','Tap for a simpler word: '+w);"));
+});
+
 test('정답을 직접 확인하면 성공 처리 후 Play My clips를 실행한다', () => {
   const check = sourceBetween('function sbCheck(){', 'function sbUnlock()');
   const reveal = sourceBetween('function sbRevealNew(){', 'function sbFlashBar(');
