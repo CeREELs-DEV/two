@@ -132,3 +132,68 @@ test('Clear dialog는 Continue 전 이동하지 않고 명시적 버튼으로 �
   assert.ok(source.includes('if(partyClear && partyClear.open) partyClear.close();'));
   assert.ok(source.includes("if(e.key==='Escape' && !(partyClear && partyClear.open)){ try{closeActivityGate();}catch(_){} }"));
 });
+
+test('투표 Submit은 결과를 즉시 표시하고 View results 버튼을 재사용한다', () => {
+  const flowSource = sourceBetween('function showSubmittedPollActions(){', 'function enterChapter2(){');
+  const listeners = {};
+  const calls = [];
+  const elements = {
+    'poll-actions': { style: {}, innerHTML: '' },
+    'poll-see': { addEventListener(type, handler) { listeners[type] = handler; } },
+    'poll-results': { style: {} },
+    'poll-opts': { style: {} },
+  };
+  const context = {
+    pollSubmitted: false,
+    pollDone: false,
+    document: { getElementById(id) { return elements[id] || null; } },
+    fitPoll() {},
+    showPollResults() { calls.push('results'); },
+    renderNodePath() { calls.push('nodes'); },
+    updateArrows() { calls.push('arrows'); },
+  };
+
+  runInNewContext(`${flowSource}; submitVote();`, context);
+
+  assert.equal(context.pollSubmitted, true);
+  assert.equal(context.pollDone, true);
+  assert.match(elements['poll-actions'].innerHTML, /id="poll-see"/);
+  assert.deepEqual(calls, ['results', 'nodes', 'arrows']);
+  assert.equal(typeof listeners.click, 'function');
+  listeners.click();
+  assert.deepEqual(calls, ['results', 'nodes', 'arrows', 'results']);
+  assert.ok(!flowSource.includes('goStep('));
+});
+
+test('완료한 투표에 재진입하면 View results 동작만 복원한다', () => {
+  const openSource = sourceBetween('function openPoll(){', 'function castVote(');
+  const calls = [];
+  const elements = {
+    'poll-opts': { style: {}, innerHTML: '', appendChild() {} },
+    'poll-q': { textContent: '' },
+    pollmodal: { classList: { remove() {}, add() {} }, setAttribute() {} },
+    'poll-results': { style: {}, innerHTML: '' },
+    'poll-actions': { style: {}, innerHTML: '' },
+  };
+  const context = {
+    POLL: { q: 'Question', opts: [] },
+    pollChoice: 1,
+    pollSubmitted: true,
+    NAVDIR: 1,
+    document: {
+      getElementById(id) { return elements[id] || null; },
+      createElement() { return {}; },
+    },
+    window: { scrollTo() {} },
+    markPoll() { calls.push('mark'); },
+    showSubmittedPollActions() { calls.push('restore'); },
+    showSubmit() { calls.push('submit-ui'); },
+    submitVote() { calls.push('resubmit'); },
+    positionActivity() {},
+    fitPoll() {},
+  };
+
+  runInNewContext(`${openSource}; openPoll();`, context);
+
+  assert.deepEqual(calls, ['mark', 'restore']);
+});
