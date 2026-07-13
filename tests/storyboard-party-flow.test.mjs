@@ -51,4 +51,5 @@ test('Clear dialog는 Continue 전 이동하지 않고 명시적 버튼으로 �
   assert.ok(source.includes("partyClear.addEventListener('cancel', function(e){ e.preventDefault(); });"));
   assert.ok(source.includes("partyClearContinue.addEventListener('click', finishActivity);"));
   assert.ok(source.includes('if(partyClear && partyClear.open) partyClear.close();'));
+  assert.ok(source.includes("if(e.key==='Escape' && !(partyClear && partyClear.open)){ try{closeActivityGate();}catch(_){} }"));
 });
