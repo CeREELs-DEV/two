@@ -4,6 +4,9 @@ import { pathToFileURL } from 'node:url';
 const PARTY_PATTERN = /const PARTY_B64="([^"]+)";/;
 const MARKER = 'var GUESTIMG=';
 
+const OLD_SEATED_GUEST_CSS = '  .chair .guestwrap{position:absolute;bottom:var(--guest-sit);left:50%;transform:translateX(-50%);width:66%;z-index:2;}';
+const NEW_SEATED_GUEST_CSS = '  .chair .guestwrap{position:absolute;bottom:var(--guest-sit);left:50%;transform:translateX(-50%);width:84px;max-width:100%;z-index:2;}';
+
 const GUEST_IMAGES = `  var GUESTIMG={
     g_usa:{happy:'images/Trump_Smile.png',normal:'images/Trump_Normal.png',unhappy:'images/Trump_Angry.png'},
     g_china:{happy:'images/Xijingping_Smile.png',normal:'images/Xijingping_Normal.png',unhappy:'images/Xijingping_Angry.png'},
@@ -88,6 +91,12 @@ export function transformPartyDocument(document) {
   else if (next.includes(COLLAPSED_CROPPED_CSS)) next = replaceOnce(next, COLLAPSED_CROPPED_CSS, NEW_CSS, '게스트 너비 CSS 업그레이드');
   else if (next.includes(CROPPED_CSS_WITHOUT_HIDDEN)) next = replaceOnce(next, CROPPED_CSS_WITHOUT_HIDDEN, NEW_CSS, '게스트 fallback CSS 업그레이드');
   else if (!next.includes(NEW_CSS)) throw new Error('게스트 CSS 기준 문자열을 찾을 수 없습니다.');
+
+  if (next.includes(OLD_SEATED_GUEST_CSS)) {
+    next = replaceOnce(next, OLD_SEATED_GUEST_CSS, NEW_SEATED_GUEST_CSS, '착석 게스트 CSS');
+  } else if (!next.includes(NEW_SEATED_GUEST_CSS)) {
+    throw new Error('착석 게스트 CSS 기준 문자열을 찾을 수 없습니다.');
+  }
 
   if (!next.includes(MARKER)) {
     next = replaceOnce(next, '  ];\n  var GMAP={};', `  ];\n${GUEST_IMAGES}\n  var GMAP={};`, '게스트 목록');
