@@ -13,9 +13,19 @@ const GUEST_IMAGES = `  var GUESTIMG={
 const OLD_CSS = `  .gav{width:100%;max-width:84px;margin:0 auto;}
   .gav svg{width:100%;height:100%;display:block;filter:drop-shadow(0 2px 3px rgba(150,120,70,.28));}`;
 
-const NEW_CSS = `  .gav{width:100%;max-width:84px;height:84px;margin:0 auto;display:flex;align-items:center;justify-content:center;}
+const CONTAIN_CSS = `  .gav{width:100%;max-width:84px;height:84px;margin:0 auto;display:flex;align-items:center;justify-content:center;}
   .gav .guest-img,.gav .guest-fallback,.gav .guest-fallback svg{width:100%;height:100%;display:block;}
   .gav .guest-img{object-fit:contain;filter:drop-shadow(0 2px 3px rgba(150,120,70,.28));}
+  .gav .guest-fallback svg{filter:drop-shadow(0 2px 3px rgba(150,120,70,.28));}`;
+
+// 1252px 원본 높이를 210px로 균일 확대하면 알파 영역은 약 55~60px × 72~81px가 된다.
+// 각 left 값은 (84 - trimWidth * 210 / 1252) / 2 - trimX * 210 / 1252를 반올림했다.
+const NEW_CSS = `  .gav{width:100%;max-width:84px;height:84px;margin:0 auto;position:relative;overflow:hidden;}
+  .gav .guest-fallback,.gav .guest-fallback svg{width:100%;height:100%;display:block;}
+  .gav .guest-img{position:absolute;top:50%;transform:translateY(-50%);height:210px;width:auto;max-width:none;filter:drop-shadow(0 2px 3px rgba(150,120,70,.28));}
+  .guestwrap[data-id="g_usa"] .guest-img{left:-74px;}
+  .guestwrap[data-id="g_china"] .guest-img{left:-14px;}
+  .guestwrap[data-id="g_korea"] .guest-img{left:-134px;}
   .gav .guest-fallback svg{filter:drop-shadow(0 2px 3px rgba(150,120,70,.28));}`;
 
 const OLD_GUEST_WRAP = `  function guestWrap(id,mode){
@@ -53,10 +63,17 @@ function replaceOnce(source, before, after, label) {
 }
 
 export function transformPartyDocument(document) {
-  if (document.includes(MARKER)) return document;
-  let next = replaceOnce(document, OLD_CSS, NEW_CSS, '게스트 CSS');
-  next = replaceOnce(next, '  ];\n  var GMAP={};', `  ];\n${GUEST_IMAGES}\n  var GMAP={};`, '게스트 목록');
-  return replaceOnce(next, OLD_GUEST_WRAP, NEW_GUEST_WRAP, 'guestWrap');
+  let next = document;
+  if (next.includes(OLD_CSS)) next = replaceOnce(next, OLD_CSS, NEW_CSS, '게스트 CSS');
+  else if (next.includes(CONTAIN_CSS)) next = replaceOnce(next, CONTAIN_CSS, NEW_CSS, '게스트 CSS 업그레이드');
+  else if (!next.includes(NEW_CSS)) throw new Error('게스트 CSS 기준 문자열을 찾을 수 없습니다.');
+
+  if (!next.includes(MARKER)) {
+    next = replaceOnce(next, '  ];\n  var GMAP={};', `  ];\n${GUEST_IMAGES}\n  var GMAP={};`, '게스트 목록');
+  }
+  if (next.includes(OLD_GUEST_WRAP)) return replaceOnce(next, OLD_GUEST_WRAP, NEW_GUEST_WRAP, 'guestWrap');
+  if (!next.includes(NEW_GUEST_WRAP)) throw new Error('guestWrap 기준 문자열을 찾을 수 없습니다.');
+  return next;
 }
 
 export function replacePartyDocument(source, document) {
