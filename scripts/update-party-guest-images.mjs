@@ -3,6 +3,12 @@ import { pathToFileURL } from 'node:url';
 
 const PARTY_PATTERN = /const PARTY_B64="([^"]+)";/;
 const MARKER = 'var GUESTIMG=';
+const PARTY_COPY_REPLACEMENTS = [
+  ['<title>Fall Gathering</title>', '<title>Harvest Gathering</title>'],
+  ['Quest: </span>Fall Gathering', 'Quest: </span>Harvest Gathering'],
+  ["n:'roast duck'", "n:'peking duck'"],
+  ["n:'dumpling'", "n:'dimsum'"],
+];
 
 const OLD_SEATED_GUEST_CSS = '  .chair .guestwrap{position:absolute;bottom:var(--guest-sit);left:50%;transform:translateX(-50%);width:66%;z-index:2;}';
 const NEW_SEATED_GUEST_CSS = '  .chair .guestwrap{position:absolute;bottom:var(--guest-sit);left:50%;transform:translateX(-50%);width:84px;max-width:100%;z-index:2;}';
@@ -92,6 +98,14 @@ function replaceOnce(source, before, after, label) {
   return source.replace(before, after);
 }
 
+function transformPartyCopy(document) {
+  return PARTY_COPY_REPLACEMENTS.reduce((next, [before, after]) => {
+    if (next.includes(before)) return next.replaceAll(before, after);
+    if (!next.includes(after)) throw new Error(`Perfect Party 문구 기준 문자열을 찾을 수 없습니다: ${before}`);
+    return next;
+  }, document);
+}
+
 export function transformPartyDocument(document) {
   let next = document;
   if (next.includes(OLD_CSS)) next = replaceOnce(next, OLD_CSS, NEW_CSS, '게스트 CSS');
@@ -120,9 +134,12 @@ export function transformPartyDocument(document) {
   if (!next.includes(MARKER)) {
     next = replaceOnce(next, '  ];\n  var GMAP={};', `  ];\n${GUEST_IMAGES}\n  var GMAP={};`, '게스트 목록');
   }
-  if (next.includes(OLD_GUEST_WRAP)) return replaceOnce(next, OLD_GUEST_WRAP, NEW_GUEST_WRAP, 'guestWrap');
-  if (!next.includes(NEW_GUEST_WRAP)) throw new Error('guestWrap 기준 문자열을 찾을 수 없습니다.');
-  return next;
+  if (next.includes(OLD_GUEST_WRAP)) {
+    next = replaceOnce(next, OLD_GUEST_WRAP, NEW_GUEST_WRAP, 'guestWrap');
+  } else if (!next.includes(NEW_GUEST_WRAP)) {
+    throw new Error('guestWrap 기준 문자열을 찾을 수 없습니다.');
+  }
+  return transformPartyCopy(next);
 }
 
 export function replacePartyDocument(source, document) {
