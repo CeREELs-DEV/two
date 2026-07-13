@@ -37,6 +37,8 @@ const IMAGE_TOP = -43;
 const HIDDEN_FALLBACK_CSS = '  .gav .guest-fallback[hidden]{display:none;}';
 const OLD_SEATED_GUEST_CSS = '  .chair .guestwrap{position:absolute;bottom:var(--guest-sit);left:50%;transform:translateX(-50%);width:66%;z-index:2;}';
 const SEATED_GUEST_CSS = '  .chair .guestwrap{position:absolute;bottom:var(--guest-sit);left:50%;transform:translateX(-50%);width:84px;max-width:100%;z-index:2;}';
+const SEATED_ZOOM_CSS = '  .chair .gav{transform:scale(var(--seated-guest-zoom,1));}';
+const SEATED_ZOOM_UPDATE = "stageEl.style.setProperty('--seated-guest-zoom',String(1.06/sc));";
 const ALPHA_VERTICAL_BOUNDS = {
   g_usa: { y: 289, height: 433 },
   g_china: { y: 297, height: 426 },
@@ -86,6 +88,8 @@ test('Perfect Party 문서에 상태별 게스트 이미지와 SVG fallback을 �
   assert.ok(transformed.includes(HIDDEN_FALLBACK_CSS));
   assert.ok(transformed.includes(SEATED_GUEST_CSS));
   assert.ok(!transformed.includes(OLD_SEATED_GUEST_CSS));
+  assert.ok(transformed.includes(SEATED_ZOOM_CSS));
+  assert.ok(transformed.includes(SEATED_ZOOM_UPDATE));
   assert.ok(transformed.includes('.gav{width:84px;max-width:100%;height:84px;margin:0 auto;position:relative;overflow:hidden;}'));
   assert.ok(transformed.includes(`.gav .guest-img{position:absolute;top:${IMAGE_TOP}px;height:210px;width:auto;max-width:none;`));
   assert.ok(!transformed.includes('top:50%;transform:translateY(-50%);height:210px'));
@@ -100,6 +104,13 @@ test('보정된 이미지의 모든 알파 세로 경계가 84px 뷰포트 안�
     const alphaBottom = IMAGE_TOP + (bounds.y + bounds.height) * scale;
     assert.ok(alphaTop >= 0, `${guestId} alpha top ${alphaTop}`);
     assert.ok(alphaBottom <= VIEWPORT_HEIGHT, `${guestId} alpha bottom ${alphaBottom}`);
+  }
+});
+
+test('착석 PNG의 최종 화면 배율은 드래그 PNG 배율과 같다', () => {
+  for (const stageScale of [0.5, 0.75, 1, 1.6]) {
+    const seatedZoom = 1.06 / stageScale;
+    assert.ok(Math.abs(stageScale * seatedZoom - 1.06) < Number.EPSILON * 4);
   }
 });
 
@@ -153,6 +164,9 @@ test('index.html의 실제 내장 문서와 9개 PNG가 배포 가능한 상태�
   assert.ok(embedded.includes(HIDDEN_FALLBACK_CSS));
   assert.ok(embedded.includes(SEATED_GUEST_CSS));
   assert.ok(!embedded.includes(OLD_SEATED_GUEST_CSS));
+  assert.ok(embedded.includes(SEATED_ZOOM_CSS));
+  assert.ok(embedded.includes(SEATED_ZOOM_UPDATE));
+  assert.equal(embedded.match(/--seated-guest-zoom/g)?.length, 2);
   assert.ok(embedded.includes('.gav{width:84px;max-width:100%;height:84px;'));
   assert.ok(embedded.includes(`position:absolute;top:${IMAGE_TOP}px;height:210px;`));
   for (const rule of EXPECTED_POSITION_CSS) assert.ok(embedded.includes(rule), rule);

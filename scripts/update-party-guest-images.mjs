@@ -6,6 +6,15 @@ const MARKER = 'var GUESTIMG=';
 
 const OLD_SEATED_GUEST_CSS = '  .chair .guestwrap{position:absolute;bottom:var(--guest-sit);left:50%;transform:translateX(-50%);width:66%;z-index:2;}';
 const NEW_SEATED_GUEST_CSS = '  .chair .guestwrap{position:absolute;bottom:var(--guest-sit);left:50%;transform:translateX(-50%);width:84px;max-width:100%;z-index:2;}';
+const NEW_SEATED_GUEST_ZOOM_CSS = `${NEW_SEATED_GUEST_CSS}
+  .chair .gav{transform:scale(var(--seated-guest-zoom,1));}`;
+
+const OLD_STAGE_FIT = `  window.__fit=function(){ var h=stageEl.offsetHeight; if(!h)return; var sc=Math.min(window.innerWidth/1420, window.innerHeight/h, 1.6); stageEl.style.transform='scale('+sc+')'; };
+  function fit(){ var h=stageEl.offsetHeight; if(!h)return; var sc=Math.min(window.innerWidth/1420, window.innerHeight/h, 1.6); stageEl.style.transform='scale('+sc+')'; }`;
+
+const NEW_STAGE_FIT = `  window.__fit=function(){ var h=stageEl.offsetHeight; if(!h)return; var sc=Math.min(window.innerWidth/1420, window.innerHeight/h, 1.6); applyScale(sc); };
+  function applyScale(sc){ stageEl.style.transform='scale('+sc+')'; stageEl.style.setProperty('--seated-guest-zoom',String(1.06/sc)); }
+  function fit(){ var h=stageEl.offsetHeight; if(!h)return; var sc=Math.min(window.innerWidth/1420, window.innerHeight/h, 1.6); applyScale(sc); }`;
 
 const GUEST_IMAGES = `  var GUESTIMG={
     g_usa:{happy:'images/Trump_Smile.png',normal:'images/Trump_Normal.png',unhappy:'images/Trump_Angry.png'},
@@ -96,6 +105,16 @@ export function transformPartyDocument(document) {
     next = replaceOnce(next, OLD_SEATED_GUEST_CSS, NEW_SEATED_GUEST_CSS, '착석 게스트 CSS');
   } else if (!next.includes(NEW_SEATED_GUEST_CSS)) {
     throw new Error('착석 게스트 CSS 기준 문자열을 찾을 수 없습니다.');
+  }
+
+  if (!next.includes(NEW_SEATED_GUEST_ZOOM_CSS)) {
+    next = replaceOnce(next, NEW_SEATED_GUEST_CSS, NEW_SEATED_GUEST_ZOOM_CSS, '착석 게스트 확대 CSS');
+  }
+
+  if (next.includes(OLD_STAGE_FIT)) {
+    next = replaceOnce(next, OLD_STAGE_FIT, NEW_STAGE_FIT, 'stage 배율 JavaScript');
+  } else if (!next.includes(NEW_STAGE_FIT)) {
+    throw new Error('stage 배율 JavaScript 기준 문자열을 찾을 수 없습니다.');
   }
 
   if (!next.includes(MARKER)) {
