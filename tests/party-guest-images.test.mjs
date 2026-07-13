@@ -30,14 +30,30 @@ const EXPECTED_POSITION_CSS = [
   '.guestwrap[data-id="g_korea"] .guest-img{left:-134px;}',
 ];
 
+const CANVAS_HEIGHT = 1252;
+const RENDERED_HEIGHT = 210;
+const VIEWPORT_HEIGHT = 84;
+const IMAGE_TOP = -43;
+const ALPHA_VERTICAL_BOUNDS = {
+  g_usa: { y: 289, height: 433 },
+  g_china: { y: 297, height: 426 },
+  g_korea: { y: 274, height: 481 },
+};
+
 const CONTAIN_CSS = `  .gav{width:100%;max-width:84px;height:84px;margin:0 auto;display:flex;align-items:center;justify-content:center;}
   .gav .guest-img,.gav .guest-fallback,.gav .guest-fallback svg{width:100%;height:100%;display:block;}
   .gav .guest-img{object-fit:contain;filter:drop-shadow(0 2px 3px rgba(150,120,70,.28));}
   .gav .guest-fallback svg{filter:drop-shadow(0 2px 3px rgba(150,120,70,.28));}`;
 
-const CROPPED_CSS = `  .gav{width:100%;max-width:84px;height:84px;margin:0 auto;position:relative;overflow:hidden;}
+const TOP_CENTER_CSS = `  .gav{width:100%;max-width:84px;height:84px;margin:0 auto;position:relative;overflow:hidden;}
   .gav .guest-fallback,.gav .guest-fallback svg{width:100%;height:100%;display:block;}
   .gav .guest-img{position:absolute;top:50%;transform:translateY(-50%);height:210px;width:auto;max-width:none;filter:drop-shadow(0 2px 3px rgba(150,120,70,.28));}
+  ${EXPECTED_POSITION_CSS.join('\n  ')}
+  .gav .guest-fallback svg{filter:drop-shadow(0 2px 3px rgba(150,120,70,.28));}`;
+
+const CROPPED_CSS = `  .gav{width:100%;max-width:84px;height:84px;margin:0 auto;position:relative;overflow:hidden;}
+  .gav .guest-fallback,.gav .guest-fallback svg{width:100%;height:100%;display:block;}
+  .gav .guest-img{position:absolute;top:${IMAGE_TOP}px;height:210px;width:auto;max-width:none;filter:drop-shadow(0 2px 3px rgba(150,120,70,.28));}
   ${EXPECTED_POSITION_CSS.join('\n  ')}
   .gav .guest-fallback svg{filter:drop-shadow(0 2px 3px rgba(150,120,70,.28));}`;
 
@@ -55,8 +71,20 @@ test('Perfect Party 문서에 상태별 게스트 이미지와 SVG fallback을 �
   assert.ok(transformed.includes("img.addEventListener('error'"));
   assert.ok(transformed.includes('guestSVG(g.color,state)'));
   assert.ok(transformed.includes('.gav{width:100%;max-width:84px;height:84px;margin:0 auto;position:relative;overflow:hidden;}'));
-  assert.ok(transformed.includes('.gav .guest-img{position:absolute;top:50%;transform:translateY(-50%);height:210px;width:auto;max-width:none;'));
+  assert.ok(transformed.includes(`.gav .guest-img{position:absolute;top:${IMAGE_TOP}px;height:210px;width:auto;max-width:none;`));
+  assert.ok(!transformed.includes('top:50%;transform:translateY(-50%);height:210px'));
   for (const rule of EXPECTED_POSITION_CSS) assert.ok(transformed.includes(rule), rule);
+});
+
+test('보정된 이미지의 모든 알파 세로 경계가 84px 뷰포트 안에 있다', () => {
+  const scale = RENDERED_HEIGHT / CANVAS_HEIGHT;
+
+  for (const [guestId, bounds] of Object.entries(ALPHA_VERTICAL_BOUNDS)) {
+    const alphaTop = IMAGE_TOP + bounds.y * scale;
+    const alphaBottom = IMAGE_TOP + (bounds.y + bounds.height) * scale;
+    assert.ok(alphaTop >= 0, `${guestId} alpha top ${alphaTop}`);
+    assert.ok(alphaBottom <= VIEWPORT_HEIGHT, `${guestId} alpha bottom ${alphaBottom}`);
+  }
 });
 
 test('변환은 재실행해도 결과가 달라지지 않는다', async () => {
@@ -65,13 +93,19 @@ test('변환은 재실행해도 결과가 달라지지 않는다', async () => {
   assert.equal(transformPartyDocument(once), once);
 });
 
-test('기존 GUESTIMG 문서의 contain CSS를 보정 CSS로 업그레이드한다', async () => {
+test('기존 GUESTIMG 문서의 이전 CSS를 보정 CSS로 업그레이드한다', async () => {
   const source = await readFile(new URL('../index.html', import.meta.url), 'utf8');
   const current = extractPartyDocument(source);
-  const previous = current.replace(CROPPED_CSS, CONTAIN_CSS);
+  const desired = current.includes(CROPPED_CSS)
+    ? current
+    : current.replace(TOP_CENTER_CSS, CROPPED_CSS);
 
-  assert.notEqual(previous, current, '이전 CSS fixture를 구성해야 한다');
-  assert.equal(transformPartyDocument(previous), current);
+  assert.ok(desired.includes(CROPPED_CSS), '보정 CSS fixture를 구성해야 한다');
+  for (const previousCss of [CONTAIN_CSS, TOP_CENTER_CSS]) {
+    const previous = desired.replace(CROPPED_CSS, previousCss);
+    assert.notEqual(previous, desired, '이전 CSS fixture를 구성해야 한다');
+    assert.equal(transformPartyDocument(previous), desired);
+  }
 });
 
 test('index.html의 실제 내장 문서와 9개 PNG가 배포 가능한 상태다', async () => {
@@ -87,5 +121,6 @@ test('index.html의 실제 내장 문서와 9개 PNG가 배포 가능한 상태�
     }
   }
   assert.ok(embedded.includes('height:210px;width:auto;max-width:none;'));
+  assert.ok(embedded.includes(`position:absolute;top:${IMAGE_TOP}px;height:210px;`));
   for (const rule of EXPECTED_POSITION_CSS) assert.ok(embedded.includes(rule), rule);
 });

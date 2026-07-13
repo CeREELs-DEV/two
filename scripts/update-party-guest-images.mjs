@@ -18,11 +18,19 @@ const CONTAIN_CSS = `  .gav{width:100%;max-width:84px;height:84px;margin:0 auto;
   .gav .guest-img{object-fit:contain;filter:drop-shadow(0 2px 3px rgba(150,120,70,.28));}
   .gav .guest-fallback svg{filter:drop-shadow(0 2px 3px rgba(150,120,70,.28));}`;
 
-// 1252px 원본 높이를 210px로 균일 확대하면 알파 영역은 약 55~60px × 72~81px가 된다.
-// 각 left 값은 (84 - trimWidth * 210 / 1252) / 2 - trimX * 210 / 1252를 반올림했다.
-const NEW_CSS = `  .gav{width:100%;max-width:84px;height:84px;margin:0 auto;position:relative;overflow:hidden;}
+const TOP_CENTER_CSS = `  .gav{width:100%;max-width:84px;height:84px;margin:0 auto;position:relative;overflow:hidden;}
   .gav .guest-fallback,.gav .guest-fallback svg{width:100%;height:100%;display:block;}
   .gav .guest-img{position:absolute;top:50%;transform:translateY(-50%);height:210px;width:auto;max-width:none;filter:drop-shadow(0 2px 3px rgba(150,120,70,.28));}
+  .guestwrap[data-id="g_usa"] .guest-img{left:-74px;}
+  .guestwrap[data-id="g_china"] .guest-img{left:-14px;}
+  .guestwrap[data-id="g_korea"] .guest-img{left:-134px;}
+  .gav .guest-fallback svg{filter:drop-shadow(0 2px 3px rgba(150,120,70,.28));}`;
+
+// 1252px 원본 높이를 210px로 균일 확대하면 알파 영역은 약 55~60px × 72~81px가 된다.
+// left는 알파 영역을 가로 중앙에 두고, top -43px는 세 이미지의 알파 세로 경계를 0~84px 안에 둔다.
+const NEW_CSS = `  .gav{width:100%;max-width:84px;height:84px;margin:0 auto;position:relative;overflow:hidden;}
+  .gav .guest-fallback,.gav .guest-fallback svg{width:100%;height:100%;display:block;}
+  .gav .guest-img{position:absolute;top:-43px;height:210px;width:auto;max-width:none;filter:drop-shadow(0 2px 3px rgba(150,120,70,.28));}
   .guestwrap[data-id="g_usa"] .guest-img{left:-74px;}
   .guestwrap[data-id="g_china"] .guest-img{left:-14px;}
   .guestwrap[data-id="g_korea"] .guest-img{left:-134px;}
@@ -66,6 +74,7 @@ export function transformPartyDocument(document) {
   let next = document;
   if (next.includes(OLD_CSS)) next = replaceOnce(next, OLD_CSS, NEW_CSS, '게스트 CSS');
   else if (next.includes(CONTAIN_CSS)) next = replaceOnce(next, CONTAIN_CSS, NEW_CSS, '게스트 CSS 업그레이드');
+  else if (next.includes(TOP_CENTER_CSS)) next = replaceOnce(next, TOP_CENTER_CSS, NEW_CSS, '게스트 세로 CSS 업그레이드');
   else if (!next.includes(NEW_CSS)) throw new Error('게스트 CSS 기준 문자열을 찾을 수 없습니다.');
 
   if (!next.includes(MARKER)) {
