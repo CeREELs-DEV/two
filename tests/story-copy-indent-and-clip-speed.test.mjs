@@ -49,7 +49,7 @@ test('P4와 P13의 지정 문단에 기존 표준 들여쓰기를 적용한다',
     '“Who are you? And what are you?” He can’t even seem to remember that Ella is an alligator.',
     '“Has his memory gotten that bad, or have I really gained too much weight?” Ella despairs.',
     '“Oh well, I guess I’ll just eat alone…”',
-    'No one notices Ella sitting off',
+    'No one notices Ella sitting off to the side, all by herself.',
   ];
   const paragraphs = storyPages.flatMap((page) => page.blocks.flatMap((block) => block.paras));
 
@@ -104,16 +104,38 @@ test('수정된 HTML의 인라인 JavaScript가 모두 컴파일된다', () => {
   });
 });
 
-test('P13의 Oh well과 No one 문단 사이에 안전한 간격을 둔다', () => {
+test('P13의 Oh well과 No one 문단 사이를 다른 섹션 간격과 맞춘다', () => {
   const page13 = pages().find((page) => page.name === 13);
   const blockFor = (text) => page13.blocks.find((block) => block.paras.some((paragraph) => paragraph.t === text));
   const ohWell = blockFor('“Oh well, I guess I’ll just eat alone…”');
-  const noOne = blockFor('No one notices Ella sitting off');
-  const pageAspect = 1252 / 763;
-  const lineHeightOnPage = (ohWell.paras[0].fs * ohWell.paras[0].lh) / pageAspect;
+  const noOne = blockFor('No one notices Ella sitting off to the side, all by herself.');
+  const stageAspectMatch = source.match(/\.cleanstage\{[^}]*aspect-ratio:([0-9.]+)/);
+  const spreadGutMatch = source.match(/const SPREAD_GUT=\{0:([0-9.]+)/);
+  assert.ok(stageAspectMatch);
+  assert.ok(spreadGutMatch);
+  const stagePageAspect = (2 - Number(spreadGutMatch[1])) / Number(stageAspectMatch[1]);
+  const lineHeightOnStage = (ohWell.paras[0].fs * ohWell.paras[0].lh) / stagePageAspect;
+  const actualGap = noOne.y - (ohWell.y + lineHeightOnStage);
+  const referenceGap = page13.blocks[1].y - (page13.blocks[0].y + page13.blocks[0].h);
 
-  assert.equal(noOne.y, 0.6585);
-  assert.ok(noOne.y - (ohWell.y + lineHeightOnPage) >= 0.03);
+  assert.equal(noOne.y, 0.666);
+  assert.ok(
+    Math.abs(actualGap - referenceGap) < 0.001,
+    `P13 문단 간격 ${actualGap}이 기준 간격 ${referenceGap}과 다릅니다.`,
+  );
+});
+
+test('P13 No one 첫 문장을 강제 줄바꿈 없이 하나의 문단으로 유지한다', () => {
+  const expected = 'No one notices Ella sitting off to the side, all by herself.';
+  const page13 = pages().find((page) => page.name === 13);
+  const block = page13.blocks.find((item) => item.paras.some((paragraph) => paragraph.t.startsWith('No one notices')));
+  const sentence = interactiveSentences().find((item) => item.t === expected);
+
+  assert.equal(block.paras[0].t, expected);
+  assert.ok(!block.paras.some((paragraph) => paragraph.t === 'to the side, all by herself.'));
+  assert.ok(sentence);
+  assert.deepEqual(Array.from(sentence.vocab.notices), ['notices', 'sees']);
+  assert.equal(block.paras[0].ind, 0.06015);
 });
 
 test('The egg is를 일반 굵기로 유지한다', () => {
