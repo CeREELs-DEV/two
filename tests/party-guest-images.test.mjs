@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import {
   extractPartyDocument,
   transformPartyDocument,
@@ -29,4 +29,17 @@ test('변환은 재실행해도 결과가 달라지지 않는다', async () => {
   const source = await readFile(new URL('../index.html', import.meta.url), 'utf8');
   const once = transformPartyDocument(extractPartyDocument(source));
   assert.equal(transformPartyDocument(once), once);
+});
+
+test('index.html의 실제 내장 문서와 9개 PNG가 배포 가능한 상태다', async () => {
+  const source = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+  const embedded = extractPartyDocument(source);
+
+  assert.ok(embedded.includes('var GUESTIMG='));
+  for (const paths of Object.values(EXPECTED)) {
+    for (const path of paths) {
+      assert.ok(embedded.includes(path), path);
+      await access(new URL(`../${path}`, import.meta.url));
+    }
+  }
 });
