@@ -76,6 +76,22 @@ function mappingLine(guestId, states) {
   return `${guestId}:{happy:'${states.happy}',normal:'${states.normal}',unhappy:'${states.unhappy}'}`;
 }
 
+function parseFoodImages(document) {
+  const match = document.match(/var FOODIMG=(\{.*?\});/s);
+  assert.ok(match, 'FOODIMG를 찾을 수 없습니다.');
+  return JSON.parse(match[1]);
+}
+
+function pngHeader(buffer) {
+  assert.equal(buffer.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+  return {
+    width: buffer.readUInt32BE(16),
+    height: buffer.readUInt32BE(20),
+    bitDepth: buffer[24],
+    colorType: buffer[25],
+  };
+}
+
 test('Perfect Party 문서에 상태별 게스트 이미지와 SVG fallback을 추가한다', async () => {
   const source = await readFile(new URL('../index.html', import.meta.url), 'utf8');
   const transformed = transformPartyDocument(extractPartyDocument(source));
@@ -130,6 +146,24 @@ test('Perfect Party 문구를 Harvest Gathering과 새 음식 이름으로 정�
   }
   for (const oldText of ['<title>Fall Gathering</title>', 'Quest: </span>Fall Gathering', "n:'roast duck'", "n:'dumpling'"]) {
     assert.ok(!transformed.includes(oldText), oldText);
+  }
+});
+
+test('Peking duck와 dimsum을 정규화된 외부 PNG로 제공한다', async () => {
+  const source = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+  const embedded = extractPartyDocument(source);
+  const foodImages = parseFoodImages(embedded);
+  const transformedFoodImages = parseFoodImages(transformPartyDocument(embedded));
+  assert.equal(foodImages.f_fish, 'images/Peking_Duck.png');
+  assert.equal(foodImages.f_dumpling, 'images/DimSum.png');
+
+  for (const [id, value] of Object.entries(foodImages)) {
+    if (id !== 'f_fish' && id !== 'f_dumpling') assert.equal(transformedFoodImages[id], value, id);
+  }
+
+  for (const path of [foodImages.f_fish, foodImages.f_dumpling]) {
+    const header = pngHeader(await readFile(new URL(`../${path}`, import.meta.url)));
+    assert.deepEqual(header, { width: 240, height: 240, bitDepth: 8, colorType: 6 });
   }
 });
 

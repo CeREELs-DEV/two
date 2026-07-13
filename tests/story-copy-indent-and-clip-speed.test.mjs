@@ -103,3 +103,23 @@ test('수정된 HTML의 인라인 JavaScript가 모두 컴파일된다', () => {
     assert.doesNotThrow(() => new Function(script), `${index + 1}번 인라인 스크립트 구문 오류`);
   });
 });
+
+test('P13의 Oh well과 No one 문단 사이에 안전한 간격을 둔다', () => {
+  const page13 = pages().find((page) => page.name === 13);
+  const blockFor = (text) => page13.blocks.find((block) => block.paras.some((paragraph) => paragraph.t === text));
+  const ohWell = blockFor('“Oh well, I guess I’ll just eat alone…”');
+  const noOne = blockFor('No one notices Ella sitting off');
+  const pageAspect = 1252 / 763;
+  const lineHeightOnPage = (ohWell.paras[0].fs * ohWell.paras[0].lh) / pageAspect;
+
+  assert.equal(noOne.y, 0.6585);
+  assert.ok(noOne.y - (ohWell.y + lineHeightOnPage) >= 0.03);
+});
+
+test('The egg is를 일반 굵기로 유지한다', () => {
+  const sentence = interactiveSentences().find((item) => item.lead === 'The egg is');
+
+  assert.ok(sentence);
+  assert.match(source, /\.lead\{[^}]*font-weight:400;/);
+  assert.ok(!source.includes('.lead{font-family:var(--hand); font-weight:700;'));
+});

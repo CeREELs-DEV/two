@@ -10,6 +10,11 @@ const PARTY_COPY_REPLACEMENTS = [
   ["n:'dumpling'", "n:'dimsum'"],
 ];
 
+const PARTY_FOOD_IMAGES = {
+  f_fish: 'images/Peking_Duck.png',
+  f_dumpling: 'images/DimSum.png',
+};
+
 const OLD_SEATED_GUEST_CSS = '  .chair .guestwrap{position:absolute;bottom:var(--guest-sit);left:50%;transform:translateX(-50%);width:66%;z-index:2;}';
 const NEW_SEATED_GUEST_CSS = '  .chair .guestwrap{position:absolute;bottom:var(--guest-sit);left:50%;transform:translateX(-50%);width:84px;max-width:100%;z-index:2;}';
 const NEW_SEATED_GUEST_ZOOM_CSS = `${NEW_SEATED_GUEST_CSS}
@@ -106,6 +111,14 @@ function transformPartyCopy(document) {
   }, document);
 }
 
+export function transformPartyFoodImages(document) {
+  const match = document.match(/var FOODIMG=(\{.*?\});/s);
+  if (!match) throw new Error('FOODIMG를 찾을 수 없습니다.');
+  const foodImages = JSON.parse(match[1]);
+  for (const [id, path] of Object.entries(PARTY_FOOD_IMAGES)) foodImages[id] = path;
+  return document.replace(match[0], `var FOODIMG=${JSON.stringify(foodImages)};`);
+}
+
 export function transformPartyDocument(document) {
   let next = document;
   if (next.includes(OLD_CSS)) next = replaceOnce(next, OLD_CSS, NEW_CSS, '게스트 CSS');
@@ -139,7 +152,7 @@ export function transformPartyDocument(document) {
   } else if (!next.includes(NEW_GUEST_WRAP)) {
     throw new Error('guestWrap 기준 문자열을 찾을 수 없습니다.');
   }
-  return transformPartyCopy(next);
+  return transformPartyFoodImages(transformPartyCopy(next));
 }
 
 export function replacePartyDocument(source, document) {
