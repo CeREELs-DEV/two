@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { runInNewContext } from 'node:vm';
 
 const source = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 
@@ -32,7 +33,12 @@ test('Storyboard 확인 버튼 문구를 Check my story로 통일한다', () => 
 });
 
 test('reunion의 쉬운 어휘를 party 대신 gathering으로 제공한다', () => {
-  assert.ok(source.includes('INTERACT_B["It’s a glorious,"][0][0].vocab.reunion[1]="gathering";'));
+  const interactSource = sourceBetween('const INTERACT_B=', 'const SPREAD_GUT=')
+    .replace('const INTERACT_B=', 'var INTERACT_B=');
+  const context = {};
+
+  assert.doesNotThrow(() => runInNewContext(interactSource, context));
+  assert.equal(context.INTERACT_B["It’s a glorious,"][0][1].vocab.reunion[1], 'gathering');
   assert.ok(source.includes("el.setAttribute('aria-label','Tap for a simpler word: '+w);"));
 });
 
